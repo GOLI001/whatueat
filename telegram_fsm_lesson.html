@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSM & Сценарии — Урок 3</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #09080F;
+  --surface:   #0F0D1A;
+  --card:      #141220;
+  --border:    #1E1B2E;
+  --purple:    #A78BFA;
+  --purple-d:  #6D28D9;
+  --purple-g:  rgba(167,139,250,.15);
+  --pink:      #F472B6;
+  --blue:      #60A5FA;
+  --green:     #34D399;
+  --amber:     #FBBF24;
+  --red:       #F87171;
+  --text:      #EDE9FE;
+  --muted:     #6B7280;
+  --dim:       #374151;
+  --code-bg:   #07060F;
+  --r: 12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  overflow-x: hidden;
+}
+
+/* noise */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .7;
+}
+
+/* orbs */
+.orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+.orb.a { width: 600px; height: 600px; background: rgba(167,139,250,.06); top: -150px; left: -100px; }
+.orb.b { width: 400px; height: 400px; background: rgba(244,114,182,.04); bottom: 0; right: -80px; }
+.orb.c { width: 300px; height: 300px; background: rgba(52,211,153,.03); top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+/* progress */
+.prog-track { position: sticky; top: 0; z-index: 30; height: 3px; background: var(--border); }
+.prog-bar   { height: 100%; background: linear-gradient(90deg, var(--purple), var(--pink)); width: 0; box-shadow: 0 0 10px var(--purple); }
+
+/* nav */
+.nav {
+  position: sticky; top: 3px; z-index: 29;
+  background: rgba(9,8,15,.88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  padding: 11px 24px;
+  display: flex; align-items: center; gap: 14px;
+}
+.nav-back { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); text-decoration: none; transition: color .2s; }
+.nav-back:hover { color: var(--purple); }
+.nav-sep  { color: var(--dim); }
+.nav-title { font-size: 13px; font-weight: 700; }
+.nav-badge {
+  margin-left: auto; font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; padding: 3px 11px; border-radius: 20px;
+  background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.3); color: var(--purple);
+}
+
+/* wrap */
+.wrap { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; padding: 0 24px 90px; }
+
+/* hero */
+.hero { text-align: center; padding: 72px 0 56px; }
+.lesson-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--purple); background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.25);
+  padding: 5px 16px; border-radius: 20px; margin-bottom: 24px;
+}
+.hero h1 { font-size: clamp(34px, 6vw, 58px); font-weight: 800; line-height: 1.08; letter-spacing: -2px; margin-bottom: 16px; }
+.hero h1 em { font-style: normal; color: var(--purple); }
+.hero h1 .pk { color: var(--pink); }
+.hero-sub { font-size: 15px; color: var(--muted); line-height: 1.75; max-width: 500px; margin: 0 auto 36px; font-weight: 400; }
+
+.pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pill {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 13px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); letter-spacing: .3px;
+}
+
+/* ── FSM DIAGRAM ── */
+.fsm-diagram { margin: 44px 0 50px; }
+.fsm-diagram h2 { font-size: 15px; font-weight: 700; color: var(--muted); text-align: center; margin-bottom: 28px; letter-spacing: .5px; text-transform: uppercase; font-size: 11px; }
+
+.states-flow {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; flex-wrap: wrap; row-gap: 16px;
+}
+.state-node {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 20px; border-radius: 12px;
+  border: 1.5px solid; min-width: 110px; text-align: center;
+  position: relative;
+}
+.state-node.start { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.06); }
+.state-node.mid   { border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.06); }
+.state-node.end   { border-color: rgba(244,114,182,.4); background: rgba(244,114,182,.06); }
+.state-node .sn-icon { font-size: 22px; }
+.state-node .sn-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; }
+.state-node.start .sn-name { color: var(--green); }
+.state-node.mid   .sn-name { color: var(--purple); }
+.state-node.end   .sn-name { color: var(--pink); }
+.state-node .sn-label { font-size: 11px; color: var(--muted); font-weight: 400; }
+
+.arrow {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 0 8px; color: var(--dim); font-size: 18px;
+}
+.arrow-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+
+/* ── SECTION ── */
+.section { margin-bottom: 28px; opacity: 0; transform: translateY(22px); transition: opacity .5s, transform .5s; }
+.section.visible { opacity: 1; transform: none; }
+
+.sec-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 15px 22px; border-radius: var(--r) var(--r) 0 0;
+  border: 1px solid var(--border); position: relative; overflow: hidden;
+}
+.sec-head::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+
+.sec-head.purple { background: linear-gradient(120deg,#160B2A,var(--card)); border-bottom-color: rgba(167,139,250,.4); }
+.sec-head.purple::before { background: var(--purple); box-shadow: 0 0 12px var(--purple); }
+.sec-head.pink   { background: linear-gradient(120deg,#200B17,var(--card)); border-bottom-color: rgba(244,114,182,.35); }
+.sec-head.pink::before   { background: var(--pink); box-shadow: 0 0 12px var(--pink); }
+.sec-head.green  { background: linear-gradient(120deg,#0A1F18,var(--card)); border-bottom-color: rgba(52,211,153,.3); }
+.sec-head.green::before  { background: var(--green); box-shadow: 0 0 12px var(--green); }
+.sec-head.blue   { background: linear-gradient(120deg,#0A1425,var(--card)); border-bottom-color: rgba(96,165,250,.3); }
+.sec-head.blue::before   { background: var(--blue); box-shadow: 0 0 12px var(--blue); }
+.sec-head.amber  { background: linear-gradient(120deg,#1F1500,var(--card)); border-bottom-color: rgba(251,191,36,.3); }
+.sec-head.amber::before  { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+
+.sec-num {
+  min-width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.purple .sec-num { background: var(--purple); color: #0D0A1A; box-shadow: 0 0 14px rgba(167,139,250,.5); }
+.pink   .sec-num { background: var(--pink);   color: #1A0510; box-shadow: 0 0 14px rgba(244,114,182,.5); }
+.green  .sec-num { background: var(--green);  color: #050F0A; box-shadow: 0 0 14px rgba(52,211,153,.5); }
+.blue   .sec-num { background: var(--blue);   color: #050A14; box-shadow: 0 0 14px rgba(96,165,250,.5); }
+.amber  .sec-num { background: var(--amber);  color: #120900; box-shadow: 0 0 14px rgba(251,191,36,.5); }
+
+.sec-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.sec-emoji { margin-left: auto; font-size: 18px; }
+
+.sec-body {
+  background: var(--card); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 var(--r) var(--r);
+  padding: 22px 24px;
+}
+.sec-desc { font-size: 14px; color: var(--muted); line-height: 1.8; margin-bottom: 16px; font-weight: 400; }
+
+/* code */
+.code-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 6px 28px rgba(0,0,0,.5); margin-bottom: 14px; }
+.code-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 14px; background: #080612; border-bottom: 1px solid var(--border);
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot.r{background:#FF5F57;}.dot.y{background:#FFBD2E;}.dot.g{background:#28CA41;}
+.code-label { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); letter-spacing: .5px; }
+.copy-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 10px;
+  border-radius: 5px; cursor: pointer; transition: all .2s; margin-left: 8px;
+}
+.copy-btn:hover { border-color: var(--purple); color: var(--purple); }
+.copy-btn.ok    { color: var(--green); border-color: var(--green); }
+
+pre { background: var(--code-bg); padding: 18px 20px; overflow-x: auto; margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.8; }
+.kw{color:#C084FC;} .fn{color:#93C5FD;} .st{color:#6EE7B7;}
+.cm{color:#4B5563;font-style:italic;} .dc{color:#FCD34D;} .nm{color:#FCA5A5;} .cl{color:#F9A8D4;}
+
+/* ic */
+.ic { display: inline; background: rgba(167,139,250,.12); color: var(--purple); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.ic.green { background: rgba(52,211,153,.1);  color: var(--green); }
+.ic.pink  { background: rgba(244,114,182,.1); color: var(--pink); }
+.ic.blue  { background: rgba(96,165,250,.1);  color: var(--blue); }
+.ic.amber { background: rgba(251,191,36,.1);  color: var(--amber); }
+
+/* alert */
+.alert { display: flex; align-items: flex-start; gap: 12px; padding: 13px 15px; border-radius: 8px; margin-top: 13px; font-size: 13px; line-height: 1.65; font-weight: 400; }
+.alert.warn    { background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.22); color: #FDE68A; }
+.alert.info    { background: rgba(96,165,250,.07); border: 1px solid rgba(96,165,250,.2);  color: #BAE6FD; }
+.alert.success { background: rgba(52,211,153,.07); border: 1px solid rgba(52,211,153,.22); color: #A7F3D0; }
+.alert.purple  { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); color: #DDD6FE; }
+.ai { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* divider */
+.divider { display: flex; align-items: center; gap: 16px; margin: 52px 0 32px; }
+.divider span { font-size: 17px; font-weight: 800; letter-spacing: -.3px; white-space: nowrap; }
+.divider::before,.divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* step list */
+.slist { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+.slist li { display: flex; gap: 12px; font-size: 13.5px; line-height: 1.65; color: var(--text); align-items: flex-start; }
+.sn { min-width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; margin-top: 2px; }
+.sn.p { background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.3); color: var(--purple); }
+.sn.g { background: rgba(52,211,153,.12);  border: 1px solid rgba(52,211,153,.3);  color: var(--green); }
+.sn.pk{ background: rgba(244,114,182,.12); border: 1px solid rgba(244,114,182,.3);  color: var(--pink); }
+
+/* if/else visual */
+.if-flow {
+  display: flex; flex-direction: column; gap: 10px; margin: 16px 0;
+}
+.if-row { display: flex; align-items: stretch; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.if-cond {
+  padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  font-weight: 700; min-width: 160px; display: flex; align-items: center;
+}
+.if-cond.if   { background: rgba(167,139,250,.12); color: var(--purple); border-right: 1px solid var(--border); }
+.if-cond.elif { background: rgba(96,165,250,.1);   color: var(--blue);   border-right: 1px solid var(--border); }
+.if-cond.els  { background: rgba(52,211,153,.08);  color: var(--green);  border-right: 1px solid var(--border); }
+.if-res {
+  padding: 10px 14px; font-size: 13px; color: var(--text); display: flex; align-items: center; flex: 1;
+  background: var(--surface);
+}
+
+/* chat simulation */
+.chat-sim {
+  background: #0A0814; border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin: 14px 0; display: flex; flex-direction: column; gap: 8px;
+}
+.chat-sim-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; text-align: center; }
+.msg-row { display: flex; }
+.msg-row.bot  { justify-content: flex-start; }
+.msg-row.user { justify-content: flex-end; }
+.bubble {
+  max-width: 75%; padding: 8px 13px; border-radius: 14px;
+  font-size: 12.5px; line-height: 1.5;
+}
+.bubble.bot  { background: #1A1428; color: var(--text); border-radius: 4px 14px 14px 14px; }
+.bubble.user { background: #1D3557; color: var(--text); border-radius: 14px 4px 14px 14px; }
+.bubble .state-tag {
+  display: inline-block; margin-top: 5px;
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  padding: 1px 6px; border-radius: 4px;
+  background: rgba(167,139,250,.15); color: var(--purple);
+}
+.bubble .state-tag.pk { background: rgba(244,114,182,.15); color: var(--pink); }
+.bubble .state-tag.g  { background: rgba(52,211,153,.15);  color: var(--green); }
+
+/* summary grid */
+.sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+@media(max-width:500px){.sum-grid{grid-template-columns:1fr;}}
+.sum-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 18px; transition: border-color .2s, transform .2s;
+}
+.sum-card:hover { transform: translateY(-2px); border-color: rgba(167,139,250,.3); }
+.sum-card .sc-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+.sum-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+.sum-card p { font-size: 12.5px; color: var(--muted); line-height: 1.55; font-weight: 400; }
+
+footer { text-align: center; padding: 40px 0 20px; color: var(--dim); font-size: 13px; position: relative; z-index: 1; font-weight: 400; }
+footer strong { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="orb a"></div>
+<div class="orb b"></div>
+<div class="orb c"></div>
+
+<div class="prog-track"><div class="prog-bar" id="prog"></div></div>
+
+<nav class="nav">
+  <a class="nav-back" href="#">← Урок 2</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-title">FSM & Сценарии</span>
+  <span class="nav-badge">Урок 3</span>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="lesson-badge">УРОК 3 · ЛОГИКА</div>
+    <h1><em>FSM</em> и<br><span class="pk">Сценарии</span></h1>
+    <p class="hero-sub">Машина состояний, многошаговые диалоги и ветвление if/else — делаем бота по-настоящему умным</p>
+    <div class="pills">
+      <span class="pill">StatesGroup</span>
+      <span class="pill">State</span>
+      <span class="pill">FSMContext</span>
+      <span class="pill">get_data / update_data</span>
+    </div>
+  </header>
+
+  <!-- FSM CONCEPT -->
+  <div class="section">
+    <div class="sec-head purple">
+      <div class="sec-num">?</div>
+      <div class="sec-title">Что такое FSM?</div>
+      <span class="sec-emoji">🧠</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        <strong>FSM (Finite State Machine)</strong> — машина состояний. Представь, что бот всегда находится в каком-то <em>состоянии</em>: ждёт имя, ждёт возраст, ждёт подтверждение. В зависимости от состояния бот реагирует по-разному на одно и то же сообщение.
+      </p>
+      <p class="sec-desc" style="margin-bottom:0">
+        Без FSM бот не помнит, на каком шаге он находится с конкретным пользователем. FSM решает эту проблему.
+      </p>
+
+      <!-- FLOW DIAGRAM -->
+      <div class="fsm-diagram" style="margin:24px 0 8px">
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-align:center;letter-spacing:.5px;margin-bottom:20px;text-transform:uppercase">Пример: регистрация в боте</div>
+        <div class="states-flow">
+          <div class="state-node start">
+            <span class="sn-icon">🚀</span>
+            <span class="sn-name">START</span>
+            <span class="sn-label">нет состояния</span>
+          </div>
+          <div class="arrow">
+            <span>→</span>
+            <span class="arrow-label">/start</span>
+          </div>
+          <div class="state-node mid">
+            <span class="sn-icon">👤</span>
+            <span class="sn-name">wait_name</span>
+            <span class="sn-label">ждём имя</span>
+          </div>
+          <div class="arrow">
+            <span>→</span>
+            <span class="arrow-label">имя введено</span>
+          </div>
+          <div class="state-node mid">
+            <span class="sn-icon">🎂</span>
+            <span class="sn-name">wait_age</span>
+            <span class="sn-label">ждём возраст</span>
+          </div>
+          <div class="arrow">
+            <span>→</span>
+            <span class="arrow-label">возраст введён</span>
+          </div>
+          <div class="state-node end">
+            <span class="sn-icon">✅</span>
+            <span class="sn-name">DONE</span>
+            <span class="sn-label">сброс состояния</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: DEFINE STATES -->
+  <div class="section">
+    <div class="sec-head purple">
+      <div class="sec-num">1</div>
+      <div class="sec-title">Объявляем состояния</div>
+      <span class="sec-emoji">🗂</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Состояния описываются классом-наследником <span class="ic">StatesGroup</span>. Каждое поле — отдельное состояние. Называй их понятно — они отражают, чего бот ждёт от пользователя.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.fsm.state import State, StatesGroup\n\nclass Registration(StatesGroup):\n    wait_name = State()   # ждём имя\n    wait_age  = State()   # ждём возраст`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.fsm.state <span class="kw">import</span> State, StatesGroup
+
+<span class="kw">class</span> <span class="cl">Registration</span>(StatesGroup):
+    wait_name = <span class="fn">State</span>()   <span class="cm"># ждём имя</span>
+    wait_age  = <span class="fn">State</span>()   <span class="cm"># ждём возраст</span></pre>
+      </div>
+      <div class="alert purple">
+        <span class="ai">💡</span>
+        <div>Можно создать сколько угодно состояний. Для большого бота делай отдельные группы: <span class="ic">Registration</span>, <span class="ic">Order</span>, <span class="ic">Quiz</span> и т.д.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: SET STATE -->
+  <div class="section">
+    <div class="sec-head purple">
+      <div class="sec-num">2</div>
+      <div class="sec-title">Устанавливаем состояние</div>
+      <span class="sec-emoji">🎯</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Чтобы перевести пользователя в состояние, добавляем <span class="ic">FSMContext</span> в параметры хендлера и вызываем <span class="ic">state.set_state()</span>.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.fsm.context import FSMContext\n\n@dp.message(Command('start'))\nasync def cmd_start(message: types.Message, state: FSMContext):\n    await message.answer('Привет! Как тебя зовут?')\n    await state.set_state(Registration.wait_name)  # переходим в первое состояние`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.fsm.context <span class="kw">import</span> FSMContext
+
+<span class="dc">@dp.message</span>(<span class="fn">Command</span>(<span class="st">'start'</span>))
+<span class="kw">async def</span> <span class="fn">cmd_start</span>(message: types.Message, state: FSMContext):
+    <span class="kw">await</span> message.answer(<span class="st">'Привет! Как тебя зовут?'</span>)
+    <span class="kw">await</span> state.set_state(Registration.wait_name)  <span class="cm"># переходим в первое состояние</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: HANDLE STATE -->
+  <div class="section">
+    <div class="sec-head pink">
+      <div class="sec-num">3</div>
+      <div class="sec-title">Обрабатываем шаги диалога</div>
+      <span class="sec-emoji">💬</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Добавляем <span class="ic">Registration.wait_name</span> в декоратор — хендлер сработает <em>только</em> когда пользователь находится в этом состоянии. Данные сохраняем через <span class="ic">state.update_data()</span>.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`# Шаг 1: получаем имя\n@dp.message(Registration.wait_name)\nasync def get_name(message: types.Message, state: FSMContext):\n    await state.update_data(name=message.text)  # сохраняем имя\n    await message.answer(f'Отлично, {message.text}! Сколько тебе лет?')\n    await state.set_state(Registration.wait_age)  # следующий шаг\n\n# Шаг 2: получаем возраст\n@dp.message(Registration.wait_age)\nasync def get_age(message: types.Message, state: FSMContext):\n    data = await state.get_data()  # достаём сохранённые данные\n    name = data['name']\n\n    await message.answer(\n        f'Готово! ✅\\n'\n        f'Имя: {name}\\n'\n        f'Возраст: {message.text}'\n    )\n    await state.clear()  # сбрасываем состояние — диалог завершён`)">copy</button>
+        </div>
+<pre><span class="cm"># Шаг 1: получаем имя</span>
+<span class="dc">@dp.message</span>(<span class="cl">Registration</span>.wait_name)
+<span class="kw">async def</span> <span class="fn">get_name</span>(message: types.Message, state: FSMContext):
+    <span class="kw">await</span> state.update_data(name=message.text)  <span class="cm"># сохраняем имя</span>
+    <span class="kw">await</span> message.answer(<span class="st">f'Отлично, </span><span class="nm">{message.text}</span><span class="st">! Сколько тебе лет?'</span>)
+    <span class="kw">await</span> state.set_state(<span class="cl">Registration</span>.wait_age)  <span class="cm"># следующий шаг</span>
+
+<span class="cm"># Шаг 2: получаем возраст</span>
+<span class="dc">@dp.message</span>(<span class="cl">Registration</span>.wait_age)
+<span class="kw">async def</span> <span class="fn">get_age</span>(message: types.Message, state: FSMContext):
+    data = <span class="kw">await</span> state.get_data()  <span class="cm"># достаём сохранённые данные</span>
+    name = data[<span class="st">'name'</span>]
+
+    <span class="kw">await</span> message.answer(
+        <span class="st">f'Готово! ✅\n'</span>
+        <span class="st">f'Имя: </span><span class="nm">{name}</span><span class="st">\n'</span>
+        <span class="st">f'Возраст: </span><span class="nm">{message.text}</span><span class="st">'</span>
+    )
+    <span class="kw">await</span> state.clear()  <span class="cm"># сбрасываем — диалог завершён</span></pre>
+      </div>
+
+      <!-- chat simulation -->
+      <div class="chat-sim">
+        <div class="chat-sim-label">📱 Как это выглядит в Telegram</div>
+        <div class="msg-row bot"><div class="bubble bot">Привет! Как тебя зовут? <div class="state-tag">wait_name</div></div></div>
+        <div class="msg-row user"><div class="bubble user">Алишер</div></div>
+        <div class="msg-row bot"><div class="bubble bot">Отлично, Алишер! Сколько тебе лет? <div class="state-tag pk">wait_age</div></div></div>
+        <div class="msg-row user"><div class="bubble user">17</div></div>
+        <div class="msg-row bot"><div class="bubble bot">Готово! ✅<br>Имя: Алишер<br>Возраст: 17 <div class="state-tag g">state cleared</div></div></div>
+      </div>
+
+      <div class="alert warn">
+        <span class="ai">⚠️</span>
+        <div><strong>state.clear()</strong> — всегда вызывай в конце диалога, иначе пользователь «застрянет» в состоянии навсегда.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IF/ELSE -->
+  <div class="divider"><span>🔀 Ветвление if / else</span></div>
+
+  <div class="section">
+    <div class="sec-head blue">
+      <div class="sec-num">4</div>
+      <div class="sec-title">Разные ответы на разные данные</div>
+      <span class="sec-emoji">🔀</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Внутри хендлера пишешь обычный Python — <span class="ic blue">if / elif / else</span>. Например, проверяем возраст и даём разный ответ:
+      </p>
+
+      <div class="if-flow">
+        <div class="if-row">
+          <div class="if-cond if">if age &lt; 14</div>
+          <div class="if-res">🚫 «Тебе нет 14 — регистрация недоступна»</div>
+        </div>
+        <div class="if-row">
+          <div class="if-cond elif">elif age &lt; 18</div>
+          <div class="if-res">⚠️ «Ты несовершеннолетний, нужно согласие родителей»</div>
+        </div>
+        <div class="if-row">
+          <div class="if-cond els">else</div>
+          <div class="if-res">✅ «Добро пожаловать, всё ок!»</div>
+        </div>
+      </div>
+
+      <div class="code-wrap" style="margin-top:16px">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py — хендлер с проверкой</span>
+          <button class="copy-btn" onclick="cp(this,`@dp.message(Registration.wait_age)\nasync def get_age(message: types.Message, state: FSMContext):\n    # Проверяем что введено число\n    if not message.text.isdigit():\n        await message.answer('❌ Введи возраст цифрами, например: 17')\n        return  # остаёмся в том же состоянии\n\n    age = int(message.text)\n    data = await state.get_data()\n    name = data['name']\n\n    if age < 14:\n        await message.answer('🚫 Тебе нет 14 — регистрация недоступна.')\n        await state.clear()\n    elif age < 18:\n        await message.answer(\n            f'⚠️ {name}, тебе {age} лет.\\n'\n            f'Нужно согласие родителей.'\n        )\n        await state.clear()\n    else:\n        await message.answer(\n            f'✅ Добро пожаловать, {name}!\\n'\n            f'Возраст {age} — всё ок.'\n        )\n        await state.clear()`)">copy</button>
+        </div>
+<pre><span class="dc">@dp.message</span>(<span class="cl">Registration</span>.wait_age)
+<span class="kw">async def</span> <span class="fn">get_age</span>(message: types.Message, state: FSMContext):
+    <span class="cm"># Проверяем что введено число</span>
+    <span class="kw">if not</span> message.text.isdigit():
+        <span class="kw">await</span> message.answer(<span class="st">'❌ Введи возраст цифрами, например: 17'</span>)
+        <span class="kw">return</span>  <span class="cm"># остаёмся в том же состоянии</span>
+
+    age = <span class="fn">int</span>(message.text)
+    data = <span class="kw">await</span> state.get_data()
+    name = data[<span class="st">'name'</span>]
+
+    <span class="kw">if</span> age &lt; <span class="nm">14</span>:
+        <span class="kw">await</span> message.answer(<span class="st">'🚫 Тебе нет 14 — регистрация недоступна.'</span>)
+        <span class="kw">await</span> state.clear()
+    <span class="kw">elif</span> age &lt; <span class="nm">18</span>:
+        <span class="kw">await</span> message.answer(
+            <span class="st">f'⚠️ </span><span class="nm">{name}</span><span class="st">, тебе </span><span class="nm">{age}</span><span class="st"> лет.\n'</span>
+            <span class="st">f'Нужно согласие родителей.'</span>
+        )
+        <span class="kw">await</span> state.clear()
+    <span class="kw">else</span>:
+        <span class="kw">await</span> message.answer(
+            <span class="st">f'✅ Добро пожаловать, </span><span class="nm">{name}</span><span class="st">!\n'</span>
+            <span class="st">f'Возраст </span><span class="nm">{age}</span><span class="st"> — всё ок.'</span>
+        )
+        <span class="kw">await</span> state.clear()</pre>
+      </div>
+      <div class="alert success">
+        <span class="ai">✅</span>
+        <div>Трюк с <strong>return</strong> без изменения состояния — если данные неверные, просим ввести снова. Пользователь остаётся на том же шаге.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANCEL -->
+  <div class="section">
+    <div class="sec-head amber">
+      <div class="sec-num">5</div>
+      <div class="sec-title">Команда отмены /cancel</div>
+      <span class="sec-emoji">🚪</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Всегда давай пользователю возможность выйти из диалога в любой момент. Хендлер без фильтра состояния с <span class="ic amber">StateFilter('*')</span> поймает команду в любом состоянии.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.filters import Command, StateFilter\n\n@dp.message(Command('cancel'), StateFilter('*'))\nasync def cancel_handler(message: types.Message, state: FSMContext):\n    current = await state.get_state()\n    if current is None:\n        await message.answer('Нечего отменять — ты и так в главном меню.')\n        return\n\n    await state.clear()\n    await message.answer('❌ Действие отменено. Возвращаю в меню.')`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.filters <span class="kw">import</span> Command, StateFilter
+
+<span class="dc">@dp.message</span>(<span class="fn">Command</span>(<span class="st">'cancel'</span>), <span class="fn">StateFilter</span>(<span class="st">'*'</span>))
+<span class="kw">async def</span> <span class="fn">cancel_handler</span>(message: types.Message, state: FSMContext):
+    current = <span class="kw">await</span> state.get_state()
+    <span class="kw">if</span> current <span class="kw">is None</span>:
+        <span class="kw">await</span> message.answer(<span class="st">'Нечего отменять — ты в главном меню.'</span>)
+        <span class="kw">return</span>
+
+    <span class="kw">await</span> state.clear()
+    <span class="kw">await</span> message.answer(<span class="st">'❌ Действие отменено. Возвращаю в меню.'</span>)</pre>
+      </div>
+      <div class="alert info">
+        <span class="ai">ℹ️</span>
+        <div><span class="ic blue">StateFilter('*')</span> означает «любое состояние, включая None». Без него команда /cancel работала бы только вне FSM.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL CODE -->
+  <div class="divider"><span>📄 Полный код</span></div>
+
+  <div class="section">
+    <div class="sec-head green">
+      <div class="sec-num">★</div>
+      <div class="sec-title">Всё вместе — рабочий бот с FSM</div>
+      <span class="sec-emoji">🤖</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">Скопируй целиком, вставь свой токен — и запускай:</p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py — полный файл</span>
+          <button class="copy-btn" onclick="cp(this,`import asyncio\nfrom aiogram import Bot, Dispatcher, types, F\nfrom aiogram.filters import Command, StateFilter\nfrom aiogram.fsm.context import FSMContext\nfrom aiogram.fsm.state import State, StatesGroup\nfrom aiogram.fsm.storage.memory import MemoryStorage\n\nTOKEN = 'ТВОЙ_ТОКЕН_СЮДА'\n\nbot = Bot(token=TOKEN)\ndp = Dispatcher(storage=MemoryStorage())\n\n\nclass Registration(StatesGroup):\n    wait_name = State()\n    wait_age  = State()\n\n\n# /cancel — работает в любом состоянии\n@dp.message(Command('cancel'), StateFilter('*'))\nasync def cancel_handler(message: types.Message, state: FSMContext):\n    if await state.get_state() is None:\n        await message.answer('Ты и так в меню.')\n        return\n    await state.clear()\n    await message.answer('❌ Отменено.')\n\n\n# /start — запускаем диалог\n@dp.message(Command('start'))\nasync def cmd_start(message: types.Message, state: FSMContext):\n    await message.answer('Привет! Как тебя зовут? (или /cancel чтобы выйти)')\n    await state.set_state(Registration.wait_name)\n\n\n# Шаг 1 — имя\n@dp.message(Registration.wait_name)\nasync def get_name(message: types.Message, state: FSMContext):\n    await state.update_data(name=message.text)\n    await message.answer(f'Отлично, {message.text}! Сколько тебе лет?')\n    await state.set_state(Registration.wait_age)\n\n\n# Шаг 2 — возраст с проверкой\n@dp.message(Registration.wait_age)\nasync def get_age(message: types.Message, state: FSMContext):\n    if not message.text.isdigit():\n        await message.answer('❌ Введи число, например: 17')\n        return\n\n    age = int(message.text)\n    data = await state.get_data()\n    name = data['name']\n\n    if age < 14:\n        await message.answer('🚫 Тебе нет 14 лет.')\n    elif age < 18:\n        await message.answer(f'⚠️ {name}, нужно согласие родителей.')\n    else:\n        await message.answer(f'✅ Добро пожаловать, {name}! Возраст {age} — ок.')\n\n    await state.clear()\n\n\nasync def main():\n    await dp.start_polling(bot)\n\nif __name__ == '__main__':\n    asyncio.run(main())`)">copy</button>
+        </div>
+<pre><span class="kw">import</span> asyncio
+<span class="kw">from</span> aiogram <span class="kw">import</span> Bot, Dispatcher, types, F
+<span class="kw">from</span> aiogram.filters <span class="kw">import</span> Command, StateFilter
+<span class="kw">from</span> aiogram.fsm.context <span class="kw">import</span> FSMContext
+<span class="kw">from</span> aiogram.fsm.state <span class="kw">import</span> State, StatesGroup
+<span class="kw">from</span> aiogram.fsm.storage.memory <span class="kw">import</span> MemoryStorage
+
+TOKEN = <span class="st">'ТВОЙ_ТОКЕН_СЮДА'</span>
+
+bot = <span class="fn">Bot</span>(token=TOKEN)
+dp  = <span class="fn">Dispatcher</span>(storage=<span class="fn">MemoryStorage</span>())
+
+
+<span class="kw">class</span> <span class="cl">Registration</span>(StatesGroup):
+    wait_name = <span class="fn">State</span>()
+    wait_age  = <span class="fn">State</span>()
+
+
+<span class="cm"># /cancel — работает в любом состоянии</span>
+<span class="dc">@dp.message</span>(<span class="fn">Command</span>(<span class="st">'cancel'</span>), <span class="fn">StateFilter</span>(<span class="st">'*'</span>))
+<span class="kw">async def</span> <span class="fn">cancel_handler</span>(message: types.Message, state: FSMContext):
+    <span class="kw">if await</span> state.get_state() <span class="kw">is None</span>:
+        <span class="kw">await</span> message.answer(<span class="st">'Ты и так в меню.'</span>)
+        <span class="kw">return</span>
+    <span class="kw">await</span> state.clear()
+    <span class="kw">await</span> message.answer(<span class="st">'❌ Отменено.'</span>)
+
+
+<span class="cm"># /start — запускаем диалог</span>
+<span class="dc">@dp.message</span>(<span class="fn">Command</span>(<span class="st">'start'</span>))
+<span class="kw">async def</span> <span class="fn">cmd_start</span>(message: types.Message, state: FSMContext):
+    <span class="kw">await</span> message.answer(<span class="st">'Привет! Как тебя зовут? (или /cancel)'</span>)
+    <span class="kw">await</span> state.set_state(<span class="cl">Registration</span>.wait_name)
+
+
+<span class="cm"># Шаг 1 — имя</span>
+<span class="dc">@dp.message</span>(<span class="cl">Registration</span>.wait_name)
+<span class="kw">async def</span> <span class="fn">get_name</span>(message: types.Message, state: FSMContext):
+    <span class="kw">await</span> state.update_data(name=message.text)
+    <span class="kw">await</span> message.answer(<span class="st">f'Отлично, </span><span class="nm">{message.text}</span><span class="st">! Сколько тебе лет?'</span>)
+    <span class="kw">await</span> state.set_state(<span class="cl">Registration</span>.wait_age)
+
+
+<span class="cm"># Шаг 2 — возраст с проверкой</span>
+<span class="dc">@dp.message</span>(<span class="cl">Registration</span>.wait_age)
+<span class="kw">async def</span> <span class="fn">get_age</span>(message: types.Message, state: FSMContext):
+    <span class="kw">if not</span> message.text.isdigit():
+        <span class="kw">await</span> message.answer(<span class="st">'❌ Введи число, например: 17'</span>)
+        <span class="kw">return</span>
+
+    age  = <span class="fn">int</span>(message.text)
+    data = <span class="kw">await</span> state.get_data()
+    name = data[<span class="st">'name'</span>]
+
+    <span class="kw">if</span>   age &lt; <span class="nm">14</span>: <span class="kw">await</span> message.answer(<span class="st">'🚫 Тебе нет 14 лет.'</span>)
+    <span class="kw">elif</span> age &lt; <span class="nm">18</span>: <span class="kw">await</span> message.answer(<span class="st">f'⚠️ </span><span class="nm">{name}</span><span class="st">, нужно согласие.'</span>)
+    <span class="kw">else</span>:          <span class="kw">await</span> message.answer(<span class="st">f'✅ Добро пожаловать, </span><span class="nm">{name}</span><span class="st">!'</span>)
+
+    <span class="kw">await</span> state.clear()
+
+
+<span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="kw">await</span> dp.start_polling(bot)
+
+<span class="kw">if</span> __name__ == <span class="st">'__main__'</span>:
+    asyncio.<span class="fn">run</span>(main())</pre>
+      </div>
+      <div class="alert warn">
+        <span class="ai">⚠️</span>
+        <div><span class="ic amber">MemoryStorage()</span> хранит состояния в памяти — при перезапуске бота они сбрасываются. Для продакшена используй <span class="ic amber">RedisStorage</span>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="divider"><span>📌 Итог урока</span></div>
+
+  <div class="sum-grid section">
+    <div class="sum-card">
+      <span class="sc-icon">🗂</span>
+      <h4>StatesGroup</h4>
+      <p>Класс с состояниями. Каждое поле — отдельный шаг диалога. Создай один класс на сценарий.</p>
+    </div>
+    <div class="sum-card">
+      <span class="sc-icon">🎯</span>
+      <h4>set_state / clear</h4>
+      <p><code style="font-family:'JetBrains Mono',monospace;font-size:11px">set_state()</code> — переводит в состояние. <code style="font-family:'JetBrains Mono',monospace;font-size:11px">clear()</code> — сбрасывает. Всегда сбрасывай в конце диалога.</p>
+    </div>
+    <div class="sum-card">
+      <span class="sc-icon">💾</span>
+      <h4>update_data / get_data</h4>
+      <p>Сохраняй данные пользователя между шагами через <code style="font-family:'JetBrains Mono',monospace;font-size:11px">update_data()</code>, читай через <code style="font-family:'JetBrains Mono',monospace;font-size:11px">get_data()</code>.</p>
+    </div>
+    <div class="sum-card">
+      <span class="sc-icon">🔀</span>
+      <h4>if / elif / else</h4>
+      <p>Обычный Python внутри хендлера. <code style="font-family:'JetBrains Mono',monospace;font-size:11px">return</code> без изменения состояния — попросить ввести снова.</p>
+    </div>
+    <div class="sum-card">
+      <span class="sc-icon">🚪</span>
+      <h4>StateFilter('*')</h4>
+      <p>Фильтр для /cancel — ловит команду в любом состоянии. Всегда добавляй эту возможность.</p>
+    </div>
+    <div class="sum-card">
+      <span class="sc-icon">💡</span>
+      <h4>MemoryStorage</h4>
+      <p>Простое хранилище для разработки. Для боевого бота переходи на Redis.</p>
+    </div>
+  </div>
+
+  <div class="alert success section" style="margin-top:8px">
+    <span class="ai">🚀</span>
+    <div><strong>Следующий урок:</strong> База данных — сохраняем пользователей, их данные и историю через SQLite и SQLAlchemy.</div>
+  </div>
+
+</div>
+
+<footer>
+  Урок 3 · FSM & Сценарии &nbsp;·&nbsp; <strong>aiogram 3.x</strong>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+    document.getElementById('prog').style.width = (p * 100) + '%';
+  });
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.06 });
+  document.querySelectorAll('.section').forEach(el => io.observe(el));
+
+  function cp(btn, text) {
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'copied ✓'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 2000);
+  }
+</script>
+</body>
+</html>
