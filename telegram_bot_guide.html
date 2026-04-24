@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Bot Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080B0F;
+    --surface:   #0D1117;
+    --card:      #111720;
+    --border:    #1C2333;
+    --blue:      #2AABEE;
+    --blue-dim:  #1A5F87;
+    --blue-glow: rgba(42,171,238,.18);
+    --green:     #34D399;
+    --amber:     #F59E0B;
+    --purple:    #A78BFA;
+    --text:      #E2E8F0;
+    --muted:     #64748B;
+    --dim:       #334155;
+    --code-bg:   #060A0E;
+    --r:         12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .6;
+  }
+
+  /* ── AMBIENT GLOW ── */
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-orb.a { width: 500px; height: 500px; background: rgba(42,171,238,.06); top: -100px; right: -100px; }
+  .glow-orb.b { width: 400px; height: 400px; background: rgba(52,211,153,.04); bottom: 10%; left: -80px; }
+
+  /* ── LAYOUT ── */
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 80px 0 60px;
+  }
+
+  .hero-icon {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 88px; height: 88px;
+    background: linear-gradient(135deg, #0D2137 0%, #0A1520 100%);
+    border: 1px solid var(--blue-dim);
+    border-radius: 24px;
+    font-size: 40px;
+    box-shadow: 0 0 40px var(--blue-glow), inset 0 1px 0 rgba(42,171,238,.15);
+    margin-bottom: 28px;
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 56px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 14px;
+  }
+  .hero h1 span { color: var(--blue); }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    font-weight: 400;
+    letter-spacing: .2px;
+  }
+
+  .badges {
+    display: inline-flex; gap: 10px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--blue);
+    letter-spacing: .5px;
+  }
+
+  /* ── STEP ── */
+  .step {
+    margin-bottom: 32px;
+    opacity: 0; transform: translateY(24px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .step.visible { opacity: 1; transform: none; }
+
+  .step-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 22px;
+    background: linear-gradient(135deg, #0D1F31 0%, var(--card) 60%);
+    border: 1px solid var(--border);
+    border-radius: var(--r) var(--r) 0 0;
+    border-bottom: 1px solid var(--blue-dim);
+    position: relative; overflow: hidden;
+  }
+  .step-header::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--blue);
+    box-shadow: 0 0 12px var(--blue);
+  }
+
+  .step-num {
+    min-width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--blue);
+    color: #fff;
+    font-size: 13px; font-weight: 700;
+    border-radius: 8px;
+    box-shadow: 0 0 16px rgba(42,171,238,.4);
+  }
+
+  .step-title {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -.3px;
+  }
+  .step-icon { font-size: 20px; margin-left: auto; }
+
+  .step-body {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--r) var(--r);
+    padding: 22px 24px;
+  }
+
+  .step-desc {
+    font-size: 14px; color: var(--muted); margin-bottom: 18px;
+    font-weight: 400; line-height: 1.7;
+  }
+
+  /* ── NUMBERED LIST ── */
+  .num-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .num-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 14px; line-height: 1.6; color: var(--text);
+  }
+  .num-list li .n {
+    min-width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(42,171,238,.12);
+    border: 1px solid rgba(42,171,238,.3);
+    border-radius: 6px;
+    font-size: 11px; font-weight: 700; color: var(--blue);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code-wrap {
+    margin-top: 16px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  }
+
+  .code-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: #0A0E14;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #FF5F57; }
+  .dot.y { background: #FFBD2E; }
+  .dot.g { background: #28CA41; }
+
+  .code-label {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--dim); letter-spacing: .5px;
+  }
+
+  .copy-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; padding: 3px 10px; border-radius: 5px;
+    cursor: pointer; transition: all .2s;
+    margin-left: 8px;
+  }
+  .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  pre {
+    background: var(--code-bg);
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7;
+    margin: 0;
+  }
+
+  .kw  { color: #C084FC; }
+  .fn  { color: #60A5FA; }
+  .st  { color: #34D399; }
+  .cm  { color: #475569; font-style: italic; }
+  .dc  { color: #F59E0B; }
+  .nm  { color: #FB923C; }
+
+  /* ── ALERT ── */
+  .alert {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .alert.warn {
+    background: rgba(245,158,11,.08);
+    border: 1px solid rgba(245,158,11,.25);
+    color: #FCD34D;
+  }
+  .alert.success {
+    background: rgba(52,211,153,.08);
+    border: 1px solid rgba(52,211,153,.25);
+    color: var(--green);
+  }
+  .alert-icon { font-size: 16px; margin-top: 1px; }
+
+  /* ── WHAT'S NEXT ── */
+  .next-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  @media (max-width: 520px) { .next-grid { grid-template-columns: 1fr; } }
+
+  .next-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color .2s, transform .2s;
+    cursor: default;
+  }
+  .next-card:hover {
+    border-color: var(--blue-dim);
+    transform: translateY(-2px);
+  }
+  .next-card .nc-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+  .next-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .next-card p { font-size: 13px; color: var(--muted); line-height: 1.5; font-weight: 400; }
+  .next-card .nc-tag {
+    display: inline-block; margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; padding: 3px 8px;
+    background: rgba(42,171,238,.1);
+    border: 1px solid rgba(42,171,238,.2);
+    border-radius: 4px; color: var(--blue);
+  }
+
+  /* ── SECTION DIVIDER ── */
+  .divider {
+    display: flex; align-items: center; gap: 16px;
+    margin: 48px 0 32px;
+  }
+  .divider span { font-size: 18px; font-weight: 800; letter-spacing: -.3px; color: var(--text); white-space: nowrap; }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-track {
+    position: sticky; top: 0; z-index: 10;
+    height: 3px; background: var(--border);
+  }
+  .progress-bar {
+    height: 100%; background: linear-gradient(90deg, var(--blue), var(--green));
+    width: 0%; transition: width .1s;
+    box-shadow: 0 0 8px var(--blue);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center; padding: 40px 0 20px;
+    color: var(--dim); font-size: 13px; font-weight: 400;
+    position: relative; z-index: 1;
+  }
+  footer strong { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="glow-orb a"></div>
+<div class="glow-orb b"></div>
+
+<div class="progress-track"><div class="progress-bar" id="prog"></div></div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-icon">🤖</div>
+    <h1>Создаём<br><span>Telegram Бота</span></h1>
+    <p>Пошаговый гайд — от нуля до работающего бота за 15 минут</p>
+    <div class="badges">
+      <span class="badge">Python 3.10+</span>
+      <span class="badge">aiogram 3.x</span>
+      <span class="badge">Telegram Bot API</span>
+      <span class="badge">async / await</span>
+    </div>
+  </header>
+
+  <!-- STEP 1 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Создаём бота в BotFather</div>
+      <span class="step-icon">🚀</span>
+    </div>
+    <div class="step-body">
+      <p class="step-desc">BotFather — официальный бот Telegram. Через него ты регистрируешь бота и получаешь токен доступа.</p>
+      <ul class="num-list">
+        <li><span class="n">1</span><span>Открой Telegram и найди <strong>@BotFather</strong></span></li>
+        <li><span class="n">2</span><span>Отправь команду <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">/start</code></span></li>
+        <li><span class="n">3</span><span>Затем отправь <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">/newbot</code></span></li>
+        <li><span class="n">4</span><span>Придумай <strong>имя бота</strong> (любое, например: My Cool Bot)</span></li>
+        <li><span class="n">5</span><span>Придумай <strong>username</strong> — должен заканчиваться на <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">bot</code>, например: <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">my_cool_bot</code></span></li>
+      </ul>
+      <div class="alert warn">
+        <span class="alert-icon">⚠️</span>
+        <div><strong>Важно!</strong> В конце BotFather выдаст TOKEN — что-то вроде <code style="font-family:'JetBrains Mono',monospace;font-size:12px">123456789:ABCdef...</code><br>Сохрани его — это ключ к твоему боту. Никому не давай!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Устанавливаем библиотеку</div>
+      <span class="step-icon">🧠</span>
+    </div>
+    <div class="step-body">
+      <p class="step-desc">Используем <strong>aiogram</strong> — самую популярную асинхронную библиотеку для Telegram Bot API на Python.</p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">terminal</span>
+          <button class="copy-btn" onclick="copyCode(this, 'pip install aiogram')">copy</button>
+        </div>
+        <pre><span class="nm">$</span> pip install aiogram</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Первый код бота</div>
+      <span class="step-icon">🧱</span>
+    </div>
+    <div class="step-body">
+      <p class="step-desc">Создай файл <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">bot.py</code> и вставь этот код:</p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="copyCode(this, `import asyncio\nfrom aiogram import Bot, Dispatcher, types\nfrom aiogram.filters import Command\n\nTOKEN = &quot;ТВОЙ_ТОКЕН_СЮДА&quot;\n\nbot = Bot(token=TOKEN)\ndp = Dispatcher()\n\n@dp.message(Command(&quot;start&quot;))\nasync def start_handler(message: types.Message):\n    await message.answer(&quot;Привет! Я твой первый бот 😎&quot;)\n\nasync def main():\n    await dp.start_polling(bot)\n\nif __name__ == &quot;__main__&quot;:\n    asyncio.run(main())`)">copy</button>
+        </div>
+        <pre><span class="kw">import</span> asyncio
+<span class="kw">from</span> aiogram <span class="kw">import</span> Bot, Dispatcher, types
+<span class="kw">from</span> aiogram.filters <span class="kw">import</span> Command
+
+TOKEN = <span class="st">"ТВОЙ_ТОКЕН_СЮДА"</span>
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+<span class="dc">@dp.message</span>(Command(<span class="st">"start"</span>))
+<span class="kw">async def</span> <span class="fn">start_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">"Привет! Я твой первый бот 😎"</span>)
+
+<span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="kw">await</span> dp.start_polling(bot)
+
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    asyncio.run(main())</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-title">Запускаем бота</div>
+      <span class="step-icon">▶️</span>
+    </div>
+    <div class="step-body">
+      <p class="step-desc">В терминале запусти файл:</p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">terminal</span>
+          <button class="copy-btn" onclick="copyCode(this, 'python bot.py')">copy</button>
+        </div>
+        <pre><span class="nm">$</span> python bot.py</pre>
+      </div>
+      <ul class="num-list" style="margin-top:16px">
+        <li><span class="n">1</span><span>Открой Telegram и найди своего бота</span></li>
+        <li><span class="n">2</span><span>Напиши ему <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">/start</code></span></li>
+        <li><span class="n">3</span><span>Бот должен ответить — готово! 🎉</span></li>
+      </ul>
+      <div class="alert success">
+        <span class="alert-icon">✅</span>
+        <div>Если бот ответил — поздравляю, ты только что создал своего первого Telegram бота!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">5</div>
+      <div class="step-title">Добавляем команды</div>
+      <span class="step-icon">⚡</span>
+    </div>
+    <div class="step-body">
+      <p class="step-desc">Добавь обработчик — бот будет повторять любые сообщения. Вставь этот код <strong>до</strong> функции <code style="background:rgba(42,171,238,.1);color:var(--blue);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">main()</code>:</p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="copyCode(this, `@dp.message()\nasync def echo(message: types.Message):\n    await message.answer(f&quot;Ты написал: {message.text}&quot;)`)">copy</button>
+        </div>
+        <pre><span class="dc">@dp.message</span>()
+<span class="kw">async def</span> <span class="fn">echo</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">f"Ты написал: </span><span class="nm">{message.text}</span><span class="st">"</span>)</pre>
+      </div>
+      <div class="alert warn" style="margin-top:16px">
+        <span class="alert-icon">💡</span>
+        <div>Обработчик без фильтров должен быть <strong>последним</strong> — иначе он перехватит все команды раньше них.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT'S NEXT -->
+  <div class="divider"><span>🔥 Что дальше</span></div>
+
+  <div class="next-grid">
+    <div class="next-card">
+      <span class="nc-icon">💬</span>
+      <h4>Кнопки</h4>
+      <p>Обычные и inline кнопки для удобного взаимодействия с пользователем</p>
+      <span class="nc-tag">ReplyKeyboard · InlineKeyboard</span>
+    </div>
+    <div class="next-card">
+      <span class="nc-icon">🧩</span>
+      <h4>Логика и сценарии</h4>
+      <p>if/else условия, FSM (машина состояний) для сложных диалогов</p>
+      <span class="nc-tag">FSM · StatesGroup</span>
+    </div>
+    <div class="next-card">
+      <span class="nc-icon">🗄️</span>
+      <h4>База данных</h4>
+      <p>Сохранение пользователей, их данных. MongoDB или SQLite</p>
+      <span class="nc-tag">MongoDB · SQLite · SQLAlchemy</span>
+    </div>
+    <div class="next-card">
+      <span class="nc-icon">🚀</span>
+      <h4>Мини-проекты</h4>
+      <p>Бот-викторина, магазин, школьный бот для оценок и заданий</p>
+      <span class="nc-tag">Projects · Portfolio</span>
+    </div>
+  </div>
+
+  <div class="alert success" style="margin-top:24px">
+    <span class="alert-icon">🎯</span>
+    <div><strong>Совет:</strong> Изучай по одному шагу. Запусти бота → добавь кнопку → сохрани данные. Каждый маленький шаг — это прогресс!</div>
+  </div>
+
+</div>
+
+<footer>
+  Telegram Bot Guide &nbsp;·&nbsp; <strong>aiogram 3.x</strong> &nbsp;·&nbsp; Python 3.10+
+</footer>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const max = document.body.scrollHeight - window.innerHeight;
+    document.getElementById('prog').style.width = (scrolled / max * 100) + '%';
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.step, .next-card').forEach(el => observer.observe(el));
+
+  // Copy button
+  function copyCode(btn, text) {
+    navigator.clipboard.writeText(text.replace(/&quot;/g, '"'));
+    btn.textContent = 'copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  // Next cards reveal
+  document.querySelectorAll('.next-card').forEach((card, i) => {
+    card.style.transitionDelay = (i * 80) + 'ms';
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(16px)';
+    card.style.transition = 'opacity .4s ease, transform .4s ease, border-color .2s, transform .2s';
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'none';
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    obs.observe(card);
+  });
+</script>
+</body>
+</html>
