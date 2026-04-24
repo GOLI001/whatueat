@@ -314,65 +314,50 @@
     box-shadow: 0 0 8px var(--blue);
   }
 
- .lesson-card {
-  display: block;
+ .btn-link {
   text-decoration: none;
-  margin-top: 20px;
+  color: inherit;
+  display: block;
 }
 
 .next-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 22px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  border: 2px solid #4facfe;
+  border-radius: 14px;
+  padding: 18px;
+  transition: 0.25s;
+  background: #f9fbff;
 }
 
-.nc-icon {
-  font-size: 32px;
+/* главный эффект кнопки */
+.next-card:hover {
+  background: #eaf4ff;
+  border-color: #007bff;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.25);
 }
 
-.nc-text {
-  flex: 1;
+/* эффект при нажатии */
+.next-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
-.nc-text h3 {
-  margin: 0 0 6px;
-  font-size: 20px;
-}
-
-.nc-text p {
-  margin: 0 0 6px;
-  font-size: 14px;
-  opacity: 0.9;
+/* чуть усилим текст */
+.next-card h4 {
+  margin: 8px 0;
 }
 
 .nc-tag {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(0, 123, 255, 0.1);
   font-size: 12px;
-  background: rgba(255,255,255,0.2);
-  padding: 4px 10px;
-  border-radius: 10px;
 }
 
-.arrow {
-  font-size: 22px;
-  opacity: 0.8;
-  transition: transform 0.3s;
-}
 
-.next-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
-}
-
-.next-card:hover .arrow {
-  transform: translateX(6px);
-}
 
   /* ── FOOTER ── */
   footer {
@@ -544,15 +529,12 @@ dp = Dispatcher()
   <div class="divider"><span>🔥 Что дальше</span></div>
 
   <div class="next-grid">
-    <a href="telegram_buttons_lesson.html" class="lesson-card">
+    <a href="telegram_buttons_lesson.html" class="btn-link">
       <div class="next-card">
         <span class="nc-icon">💬</span>
-        <div class="nc-text">
-          <h3>Кнопки</h3>
-          <p>Обычные и inline кнопки для удобного взаимодействия с пользователем</p>
-          <span class="nc-tag">ReplyKeyboard · InlineKeyboard</span>
-        </div>
-        <span class="arrow">→</span>
+        <h4>Кнопки</h4>
+        <p>Обычные и inline кнопки для удобного взаимодействия с пользователем</p>
+        <span class="nc-tag">ReplyKeyboard · InlineKeyboard</span>
       </div>
     </a>
     <div class="next-card">
