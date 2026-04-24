@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кнопки в Telegram боте — Урок 2</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080B0F;
+  --surface:  #0D1117;
+  --card:     #111720;
+  --border:   #1C2333;
+  --blue:     #2AABEE;
+  --blue-dim: #1A5F87;
+  --blue-glow:rgba(42,171,238,.16);
+  --green:    #34D399;
+  --amber:    #F59E0B;
+  --purple:   #A78BFA;
+  --pink:     #F472B6;
+  --text:     #E2E8F0;
+  --muted:    #64748B;
+  --dim:      #334155;
+  --code-bg:  #060A0E;
+  --r: 12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .6;
+}
+
+.orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(110px); pointer-events: none; z-index: 0;
+}
+.orb.a { width: 480px; height: 480px; background: rgba(42,171,238,.05); top: -80px; right: -80px; }
+.orb.b { width: 360px; height: 360px; background: rgba(167,139,250,.04); bottom: 5%; left: -60px; }
+
+/* ── PROGRESS ── */
+.prog-track { position: sticky; top: 0; z-index: 20; height: 3px; background: var(--border); }
+.prog-bar   { height: 100%; background: linear-gradient(90deg, var(--blue), var(--purple)); width: 0%; transition: width .1s; box-shadow: 0 0 8px var(--blue); }
+
+/* ── NAV ── */
+.nav {
+  position: sticky; top: 3px; z-index: 19;
+  background: rgba(8,11,15,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+.nav-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--muted);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 6px;
+  transition: color .2s;
+}
+.nav-back:hover { color: var(--blue); }
+.nav-sep { color: var(--dim); }
+.nav-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.nav-badge {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(167,139,250,.1);
+  border: 1px solid rgba(167,139,250,.25);
+  color: var(--purple);
+}
+
+/* ── WRAP ── */
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 800px; margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── HERO ── */
+.hero { text-align: center; padding: 64px 0 52px; }
+
+.lesson-num {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; color: var(--purple);
+  background: rgba(167,139,250,.1);
+  border: 1px solid rgba(167,139,250,.25);
+  padding: 4px 14px; border-radius: 20px;
+  margin-bottom: 22px;
+}
+
+.hero h1 {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 800; line-height: 1.1; letter-spacing: -1.5px;
+  margin-bottom: 14px;
+}
+.hero h1 .hl-blue   { color: var(--blue); }
+.hero h1 .hl-purple { color: var(--purple); }
+
+.hero p { font-size: 15px; color: var(--muted); line-height: 1.7; font-weight: 400; max-width: 480px; margin: 0 auto 32px; }
+
+.hero-pills { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; padding: 5px 14px;
+  border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted);
+}
+
+/* ── TYPE SWITCH ── */
+.type-switch {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px; margin: 40px 0 32px;
+}
+.type-card {
+  padding: 22px; border-radius: var(--r);
+  border: 2px solid var(--border);
+  background: var(--card);
+  cursor: pointer; transition: all .25s;
+  position: relative; overflow: hidden;
+}
+.type-card::before {
+  content: ''; position: absolute; inset: 0;
+  opacity: 0; transition: opacity .25s;
+}
+.type-card.reply::before  { background: radial-gradient(circle at 0 0, rgba(42,171,238,.08), transparent 70%); }
+.type-card.inline::before { background: radial-gradient(circle at 0 0, rgba(167,139,250,.08), transparent 70%); }
+.type-card:hover { transform: translateY(-2px); }
+.type-card.reply:hover,  .type-card.reply.active  { border-color: var(--blue); }
+.type-card.inline:hover, .type-card.inline.active { border-color: var(--purple); }
+.type-card.reply:hover::before,  .type-card.reply.active::before  { opacity: 1; }
+.type-card.inline:hover::before, .type-card.inline.active::before { opacity: 1; }
+
+.tc-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+.tc-name { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+.type-card.reply  .tc-name { color: var(--blue); }
+.type-card.inline .tc-name { color: var(--purple); }
+.tc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; font-weight: 400; }
+.tc-tag {
+  display: inline-block; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; padding: 2px 8px; border-radius: 4px;
+}
+.type-card.reply  .tc-tag { background: rgba(42,171,238,.1);  border: 1px solid rgba(42,171,238,.2);  color: var(--blue); }
+.type-card.inline .tc-tag { background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.2); color: var(--purple); }
+
+/* ── SECTION ── */
+.section { margin-bottom: 36px; opacity: 0; transform: translateY(20px); transition: opacity .5s ease, transform .5s ease; }
+.section.visible { opacity: 1; transform: none; }
+
+.sec-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 15px 22px;
+  border-radius: var(--r) var(--r) 0 0;
+  border: 1px solid var(--border);
+  border-bottom-width: 1px;
+  position: relative; overflow: hidden;
+}
+.sec-header::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.sec-header.blue  { background: linear-gradient(135deg, #0D1F31, var(--card)); border-bottom-color: var(--blue-dim); }
+.sec-header.blue::after  { background: var(--blue);   box-shadow: 0 0 10px var(--blue); }
+.sec-header.purple{ background: linear-gradient(135deg, #150D2A, var(--card)); border-bottom-color: rgba(167,139,250,.4); }
+.sec-header.purple::after{ background: var(--purple); box-shadow: 0 0 10px var(--purple); }
+.sec-header.green { background: linear-gradient(135deg, #0D1F18, var(--card)); border-bottom-color: rgba(52,211,153,.3); }
+.sec-header.green::after { background: var(--green);  box-shadow: 0 0 10px var(--green); }
+
+.sec-num {
+  min-width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; font-size: 13px; font-weight: 700;
+}
+.sec-header.blue   .sec-num { background: var(--blue);   color: #fff; box-shadow: 0 0 12px rgba(42,171,238,.4); }
+.sec-header.purple .sec-num { background: var(--purple); color: #fff; box-shadow: 0 0 12px rgba(167,139,250,.4); }
+.sec-header.green  .sec-num { background: var(--green);  color: #000; box-shadow: 0 0 12px rgba(52,211,153,.4); }
+
+.sec-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.sec-emoji { margin-left: auto; font-size: 18px; }
+
+.sec-body {
+  background: var(--card);
+  border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--r) var(--r);
+  padding: 24px;
+}
+
+.sec-desc { font-size: 14px; color: var(--muted); line-height: 1.75; margin-bottom: 18px; font-weight: 400; }
+
+/* ── CODE ── */
+.code-wrap {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  margin-bottom: 16px;
+}
+.code-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 14px;
+  background: #0A0E14;
+  border-bottom: 1px solid var(--border);
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot.r{background:#FF5F57;} .dot.y{background:#FFBD2E;} .dot.g{background:#28CA41;}
+.code-label { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); letter-spacing: .5px; }
+.copy-btn {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; padding: 3px 10px; border-radius: 5px;
+  cursor: pointer; transition: all .2s; margin-left: 8px;
+}
+.copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+.copy-btn.ok    { color: var(--green); border-color: var(--green); }
+
+pre {
+  background: var(--code-bg); padding: 18px 20px;
+  overflow-x: auto; margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.75;
+}
+.kw{color:#C084FC;} .fn{color:#60A5FA;} .st{color:#34D399;}
+.cm{color:#475569;font-style:italic;} .dc{color:#F59E0B;} .nm{color:#FB923C;}
+.at{color:#F472B6;}
+
+/* ── INLINE C ── */
+.ic {
+  display: inline;
+  background: rgba(42,171,238,.1); color: var(--blue);
+  padding: 1px 6px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+.ic.purple { background: rgba(167,139,250,.1); color: var(--purple); }
+.ic.green  { background: rgba(52,211,153,.1);  color: var(--green); }
+
+/* ── ALERT ── */
+.alert {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: 8px; margin-top: 14px;
+  font-size: 13px; line-height: 1.6; font-weight: 400;
+}
+.alert.warn    { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); color: #FCD34D; }
+.alert.info    { background: rgba(42,171,238,.08); border: 1px solid rgba(42,171,238,.22);  color: #7DD3FC; }
+.alert.success { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.25);  color: var(--green); }
+.alert-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+
+/* ── COMPARISON TABLE ── */
+.cmp-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+.cmp-table th {
+  padding: 10px 14px; text-align: left; font-weight: 700;
+  background: var(--surface); color: var(--muted);
+  border-bottom: 1px solid var(--border); font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .5px;
+}
+.cmp-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top; line-height: 1.5;
+}
+.cmp-table tr:last-child td { border-bottom: none; }
+.cmp-table tr:hover td { background: rgba(255,255,255,.02); }
+.tag-blue   { color: var(--blue);   font-weight: 700; }
+.tag-purple { color: var(--purple); font-weight: 700; }
+
+/* ── PHONE MOCKUP ── */
+.phones { display: flex; gap: 20px; justify-content: center; margin: 24px 0 8px; flex-wrap: wrap; }
+.phone-mock {
+  background: #0F1923;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 12px;
+  width: 200px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+}
+.phone-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-align: center; margin-bottom: 10px;
+  letter-spacing: .5px;
+}
+.phone-label.blue   { color: var(--blue); }
+.phone-label.purple { color: var(--purple); }
+
+.chat-msg {
+  background: #1A2840;
+  border-radius: 12px 12px 12px 2px;
+  padding: 8px 12px; font-size: 12px;
+  color: var(--text); line-height: 1.4; margin-bottom: 8px;
+  max-width: 85%;
+}
+.chat-msg.bot { background: #1A2840; }
+
+/* Reply keyboard */
+.reply-kb { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.reply-row { display: flex; gap: 5px; }
+.reply-btn {
+  flex: 1; background: #1E2E3D; border: 1px solid #2A3F54;
+  border-radius: 8px; padding: 6px 4px;
+  font-size: 10px; text-align: center; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Inline keyboard */
+.inline-msg {
+  background: #1A2840;
+  border-radius: 12px 12px 12px 2px;
+  padding: 8px 12px; font-size: 12px;
+  color: var(--text); line-height: 1.4; margin-bottom: 4px;
+  max-width: 90%;
+}
+.inline-kb { display: flex; flex-direction: column; gap: 4px; }
+.inline-row { display: flex; gap: 4px; }
+.inline-btn {
+  flex: 1; background: #1C2F47; border: 1px solid #2A4060;
+  border-radius: 6px; padding: 5px 6px;
+  font-size: 10px; text-align: center; color: var(--blue);
+}
+
+/* ── STEP LIST ── */
+.step-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.step-list li {
+  display: flex; gap: 14px;
+  font-size: 14px; line-height: 1.6; color: var(--text);
+}
+.step-list .sn {
+  min-width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; font-size: 11px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0; margin-top: 1px;
+}
+.sn.blue   { background: rgba(42,171,238,.12);  border: 1px solid rgba(42,171,238,.3);  color: var(--blue); }
+.sn.purple { background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.3); color: var(--purple); }
+.sn.green  { background: rgba(52,211,153,.12);  border: 1px solid rgba(52,211,153,.3);  color: var(--green); }
+
+/* ── DIVIDER ── */
+.divider {
+  display: flex; align-items: center; gap: 16px;
+  margin: 50px 0 30px;
+}
+.divider span { font-size: 17px; font-weight: 800; letter-spacing: -.3px; color: var(--text); white-space: nowrap; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── SUMMARY CARD ── */
+.summary {
+  background: linear-gradient(135deg, #0D1F31 0%, #150D2A 100%);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 28px; margin-top: 14px;
+}
+.summary h3 { font-size: 18px; font-weight: 800; margin-bottom: 18px; letter-spacing: -.3px; }
+.sum-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.sum-row:last-child { border-bottom: none; }
+.sum-icon { font-size: 18px; flex-shrink: 0; }
+.sum-title { font-weight: 700; margin-bottom: 3px; }
+.sum-desc  { color: var(--muted); line-height: 1.5; font-weight: 400; }
+
+footer {
+  text-align: center; padding: 40px 0 16px;
+  color: var(--dim); font-size: 13px; font-weight: 400;
+  position: relative; z-index: 1;
+}
+footer strong { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="orb a"></div>
+<div class="orb b"></div>
+
+<div class="prog-track"><div class="prog-bar" id="prog"></div></div>
+
+<nav class="nav">
+  <a class="nav-back" href="#">← Урок 1</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-title">Кнопки в Telegram боте</span>
+  <span class="nav-badge">Урок 2</span>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="lesson-num">УРОК 2 · КНОПКИ</div>
+    <h1>
+      <span class="hl-blue">Reply</span> и<br>
+      <span class="hl-purple">Inline</span> кнопки
+    </h1>
+    <p>Два типа кнопок — разные цели, разная логика. Разберём каждый с нуля и с живым кодом.</p>
+    <div class="hero-pills">
+      <span class="pill">ReplyKeyboardMarkup</span>
+      <span class="pill">InlineKeyboardMarkup</span>
+      <span class="pill">callback_query</span>
+    </div>
+  </header>
+
+  <!-- TYPE COMPARISON -->
+  <div class="type-switch section">
+    <div class="type-card reply">
+      <span class="tc-icon">⌨️</span>
+      <div class="tc-name">Reply Keyboard</div>
+      <div class="tc-desc">Кнопки появляются внизу экрана вместо клавиатуры. Пользователь нажимает — бот получает текст.</div>
+      <span class="tc-tag">ReplyKeyboardMarkup</span>
+    </div>
+    <div class="type-card inline">
+      <span class="tc-icon">🔲</span>
+      <div class="tc-name">Inline Keyboard</div>
+      <div class="tc-desc">Кнопки прикрепляются прямо к сообщению. Нажатие отправляет скрытый callback — текст не виден в чате.</div>
+      <span class="tc-tag">InlineKeyboardMarkup</span>
+    </div>
+  </div>
+
+  <!-- PHONE PREVIEW -->
+  <div class="section" style="text-align:center">
+    <div class="phones">
+      <div class="phone-mock">
+        <div class="phone-label blue">⌨️ Reply Keyboard</div>
+        <div class="chat-msg bot">Привет! Выбери действие:</div>
+        <div class="reply-kb">
+          <div class="reply-row">
+            <div class="reply-btn">📋 Каталог</div>
+            <div class="reply-btn">ℹ️ О нас</div>
+          </div>
+          <div class="reply-row">
+            <div class="reply-btn">📞 Контакты</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-mock">
+        <div class="phone-label purple">🔲 Inline Keyboard</div>
+        <div class="inline-msg">Выбери категорию:</div>
+        <div class="inline-kb">
+          <div class="inline-row">
+            <div class="inline-btn">🐱 Кошки</div>
+            <div class="inline-btn">🐶 Собаки</div>
+          </div>
+          <div class="inline-row">
+            <div class="inline-btn">❌ Отмена</div>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="inline-msg">Ещё одно сообщение...</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">Примерный вид кнопок в Telegram</div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="section">
+    <table class="cmp-table">
+      <thead>
+        <tr>
+          <th>Параметр</th>
+          <th class="tag-blue">Reply Keyboard</th>
+          <th class="tag-purple">Inline Keyboard</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Где отображается</td><td>Внизу экрана (вместо клавиатуры)</td><td>Под сообщением бота</td></tr>
+        <tr><td>Что отправляет</td><td>Текст кнопки в чат</td><td>Скрытый callback (не виден)</td></tr>
+        <tr><td>Подходит для</td><td>Меню навигации, постоянные действия</td><td>Кнопки к конкретному сообщению</td></tr>
+        <tr><td>Класс aiogram</td><td><span class="ic">ReplyKeyboardMarkup</span></td><td><span class="ic purple">InlineKeyboardMarkup</span></td></tr>
+        <tr><td>Кнопка</td><td><span class="ic">KeyboardButton</span></td><td><span class="ic purple">InlineKeyboardButton</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── PART 1: REPLY ── -->
+  <div class="divider"><span>⌨️ Часть 1: Reply Keyboard</span></div>
+
+  <!-- STEP 1 -->
+  <div class="section">
+    <div class="sec-header blue">
+      <div class="sec-num">1</div>
+      <div class="sec-title">Создаём клавиатуру</div>
+      <span class="sec-emoji">🛠</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Сначала импортируем нужные классы и собираем клавиатуру. Кнопки группируем по строкам — каждый список внутри <span class="ic">keyboard</span> — это одна строка.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.types import ReplyKeyboardMarkup, KeyboardButton\n\n# Создаём кнопки\nbtn_catalog  = KeyboardButton(text='📋 Каталог')\nbtn_about    = KeyboardButton(text='ℹ️ О нас')\nbtn_contacts = KeyboardButton(text='📞 Контакты')\n\n# Собираем клавиатуру (keyboard — список строк)\nkeyboard = ReplyKeyboardMarkup(\n    keyboard=[\n        [btn_catalog, btn_about],  # первая строка\n        [btn_contacts]             # вторая строка\n    ],\n    resize_keyboard=True  # подгоняет размер под экран\n)`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.types <span class="kw">import</span> ReplyKeyboardMarkup, KeyboardButton
+
+<span class="cm"># Создаём кнопки</span>
+btn_catalog  = KeyboardButton(text=<span class="st">'📋 Каталог'</span>)
+btn_about    = KeyboardButton(text=<span class="st">'ℹ️ О нас'</span>)
+btn_contacts = KeyboardButton(text=<span class="st">'📞 Контакты'</span>)
+
+<span class="cm"># Собираем клавиатуру (keyboard — список строк)</span>
+keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [btn_catalog, btn_about],  <span class="cm"># первая строка</span>
+        [btn_contacts]             <span class="cm"># вторая строка</span>
+    ],
+    resize_keyboard=<span class="nm">True</span>  <span class="cm"># подгоняет размер под экран</span>
+)</pre>
+      </div>
+      <div class="alert info">
+        <span class="alert-icon">💡</span>
+        <div><strong>resize_keyboard=True</strong> — всегда добавляй это. Иначе кнопки будут огромными и займут пол-экрана.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section">
+    <div class="sec-header blue">
+      <div class="sec-num">2</div>
+      <div class="sec-title">Отправляем клавиатуру пользователю</div>
+      <span class="sec-emoji">📤</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Клавиатура передаётся в параметр <span class="ic">reply_markup</span> при отправке сообщения. После отправки она остаётся на экране до следующего обновления.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`@dp.message(Command('start'))\nasync def start_handler(message: types.Message):\n    await message.answer(\n        'Привет! Выбери действие:',\n        reply_markup=keyboard  # передаём клавиатуру\n    )`)">copy</button>
+        </div>
+<pre><span class="dc">@dp.message</span>(Command(<span class="st">'start'</span>))
+<span class="kw">async def</span> <span class="fn">start_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(
+        <span class="st">'Привет! Выбери действие:'</span>,
+        reply_markup=keyboard  <span class="cm"># передаём клавиатуру</span>
+    )</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section">
+    <div class="sec-header blue">
+      <div class="sec-num">3</div>
+      <div class="sec-title">Обрабатываем нажатие</div>
+      <span class="sec-emoji">👆</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        При нажатии Reply-кнопки бот получает обычное текстовое сообщение — текст кнопки. Ловим его через <span class="ic">F.text</span>:
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram import F\n\n@dp.message(F.text == '📋 Каталог')\nasync def catalog_handler(message: types.Message):\n    await message.answer('Вот наш каталог...')\n\n@dp.message(F.text == 'ℹ️ О нас')\nasync def about_handler(message: types.Message):\n    await message.answer('Мы — крутая команда!')\n\n@dp.message(F.text == '📞 Контакты')\nasync def contacts_handler(message: types.Message):\n    await message.answer('Пиши нам: @support')`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram <span class="kw">import</span> F
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'📋 Каталог'</span>)
+<span class="kw">async def</span> <span class="fn">catalog_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Вот наш каталог...'</span>)
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'ℹ️ О нас'</span>)
+<span class="kw">async def</span> <span class="fn">about_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Мы — крутая команда!'</span>)
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'📞 Контакты'</span>)
+<span class="kw">async def</span> <span class="fn">contacts_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Пиши нам: @support'</span>)</pre>
+      </div>
+      <div class="alert success">
+        <span class="alert-icon">✅</span>
+        <div><strong>Готово!</strong> Запусти бота, нажми /start — увидишь кнопки внизу экрана. Нажми любую — бот ответит.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL REPLY CODE -->
+  <div class="section">
+    <div class="sec-header blue">
+      <div class="sec-num">★</div>
+      <div class="sec-title">Полный код — Reply Keyboard</div>
+      <span class="sec-emoji">📄</span>
+    </div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py — полный файл</span>
+          <button class="copy-btn" onclick="cp(this,`import asyncio\nfrom aiogram import Bot, Dispatcher, types, F\nfrom aiogram.filters import Command\nfrom aiogram.types import ReplyKeyboardMarkup, KeyboardButton\n\nTOKEN = 'ТВОЙ_ТОКЕН_СЮДА'\nbot = Bot(token=TOKEN)\ndp = Dispatcher()\n\n# Клавиатура\nkeyboard = ReplyKeyboardMarkup(\n    keyboard=[\n        [KeyboardButton(text='📋 Каталог'), KeyboardButton(text='ℹ️ О нас')],\n        [KeyboardButton(text='📞 Контакты')]\n    ],\n    resize_keyboard=True\n)\n\n@dp.message(Command('start'))\nasync def start_handler(message: types.Message):\n    await message.answer('Привет! Выбери действие:', reply_markup=keyboard)\n\n@dp.message(F.text == '📋 Каталог')\nasync def catalog_handler(message: types.Message):\n    await message.answer('Вот наш каталог...')\n\n@dp.message(F.text == 'ℹ️ О нас')\nasync def about_handler(message: types.Message):\n    await message.answer('Мы — крутая команда!')\n\n@dp.message(F.text == '📞 Контакты')\nasync def contacts_handler(message: types.Message):\n    await message.answer('Пиши нам: @support')\n\nasync def main():\n    await dp.start_polling(bot)\n\nif __name__ == '__main__':\n    asyncio.run(main())`)">copy</button>
+        </div>
+<pre><span class="kw">import</span> asyncio
+<span class="kw">from</span> aiogram <span class="kw">import</span> Bot, Dispatcher, types, F
+<span class="kw">from</span> aiogram.filters <span class="kw">import</span> Command
+<span class="kw">from</span> aiogram.types <span class="kw">import</span> ReplyKeyboardMarkup, KeyboardButton
+
+TOKEN = <span class="st">'ТВОЙ_ТОКЕН_СЮДА'</span>
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+<span class="cm"># Клавиатура</span>
+keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text=<span class="st">'📋 Каталог'</span>), KeyboardButton(text=<span class="st">'ℹ️ О нас'</span>)],
+        [KeyboardButton(text=<span class="st">'📞 Контакты'</span>)]
+    ],
+    resize_keyboard=<span class="nm">True</span>
+)
+
+<span class="dc">@dp.message</span>(Command(<span class="st">'start'</span>))
+<span class="kw">async def</span> <span class="fn">start_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Привет! Выбери действие:'</span>, reply_markup=keyboard)
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'📋 Каталог'</span>)
+<span class="kw">async def</span> <span class="fn">catalog_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Вот наш каталог...'</span>)
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'ℹ️ О нас'</span>)
+<span class="kw">async def</span> <span class="fn">about_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Мы — крутая команда!'</span>)
+
+<span class="dc">@dp.message</span>(F.text == <span class="st">'📞 Контакты'</span>)
+<span class="kw">async def</span> <span class="fn">contacts_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Пиши нам: @support'</span>)
+
+<span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="kw">await</span> dp.start_polling(bot)
+
+<span class="kw">if</span> __name__ == <span class="st">'__main__'</span>:
+    asyncio.run(main())</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PART 2: INLINE ── -->
+  <div class="divider"><span>🔲 Часть 2: Inline Keyboard</span></div>
+
+  <!-- STEP 1 -->
+  <div class="section">
+    <div class="sec-header purple">
+      <div class="sec-num">1</div>
+      <div class="sec-title">Создаём Inline клавиатуру</div>
+      <span class="sec-emoji">🛠</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        У каждой Inline кнопки есть <span class="ic purple">callback_data</span> — скрытая строка, которая приходит боту при нажатии. Пользователь её не видит.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton\n\ninline_kb = InlineKeyboardMarkup(\n    inline_keyboard=[\n        [\n            InlineKeyboardButton(text='🐱 Кошки', callback_data='cats'),\n            InlineKeyboardButton(text='🐶 Собаки', callback_data='dogs'),\n        ],\n        [\n            InlineKeyboardButton(text='❌ Отмена', callback_data='cancel'),\n        ]\n    ]\n)`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.types <span class="kw">import</span> InlineKeyboardMarkup, InlineKeyboardButton
+
+inline_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text=<span class="st">'🐱 Кошки'</span>, callback_data=<span class="st">'cats'</span>),
+            InlineKeyboardButton(text=<span class="st">'🐶 Собаки'</span>, callback_data=<span class="st">'dogs'</span>),
+        ],
+        [
+            InlineKeyboardButton(text=<span class="st">'❌ Отмена'</span>, callback_data=<span class="st">'cancel'</span>),
+        ]
+    ]
+)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section">
+    <div class="sec-header purple">
+      <div class="sec-num">2</div>
+      <div class="sec-title">Отправляем и обрабатываем callback</div>
+      <span class="sec-emoji">📡</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Нажатие Inline кнопки вызывает <span class="ic purple">callback_query</span> — не сообщение! Ловим через <span class="ic purple">@dp.callback_query</span> и фильтруем по <span class="ic purple">F.data</span>. В конце обязательно вызываем <span class="ic green">answer()</span> — это убирает "часики" на кнопке.
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`from aiogram.types import CallbackQuery\n\n# Отправляем сообщение с inline кнопками\n@dp.message(Command('menu'))\nasync def menu_handler(message: types.Message):\n    await message.answer('Выбери категорию:', reply_markup=inline_kb)\n\n# Обрабатываем нажатия\n@dp.callback_query(F.data == 'cats')\nasync def cats_cb(callback: CallbackQuery):\n    await callback.message.answer('🐱 Раздел: Кошки')\n    await callback.answer()  # убираем часики!\n\n@dp.callback_query(F.data == 'dogs')\nasync def dogs_cb(callback: CallbackQuery):\n    await callback.message.answer('🐶 Раздел: Собаки')\n    await callback.answer()\n\n@dp.callback_query(F.data == 'cancel')\nasync def cancel_cb(callback: CallbackQuery):\n    await callback.message.answer('Отменено.')\n    await callback.answer('Действие отменено', show_alert=True)`)">copy</button>
+        </div>
+<pre><span class="kw">from</span> aiogram.types <span class="kw">import</span> CallbackQuery
+
+<span class="cm"># Отправляем сообщение с inline кнопками</span>
+<span class="dc">@dp.message</span>(Command(<span class="st">'menu'</span>))
+<span class="kw">async def</span> <span class="fn">menu_handler</span>(message: types.Message):
+    <span class="kw">await</span> message.answer(<span class="st">'Выбери категорию:'</span>, reply_markup=inline_kb)
+
+<span class="cm"># Обрабатываем нажатия</span>
+<span class="dc">@dp.callback_query</span>(F.data == <span class="st">'cats'</span>)
+<span class="kw">async def</span> <span class="fn">cats_cb</span>(callback: CallbackQuery):
+    <span class="kw">await</span> callback.message.answer(<span class="st">'🐱 Раздел: Кошки'</span>)
+    <span class="kw">await</span> callback.answer()  <span class="cm"># убираем часики!</span>
+
+<span class="dc">@dp.callback_query</span>(F.data == <span class="st">'dogs'</span>)
+<span class="kw">async def</span> <span class="fn">dogs_cb</span>(callback: CallbackQuery):
+    <span class="kw">await</span> callback.message.answer(<span class="st">'🐶 Раздел: Собаки'</span>)
+    <span class="kw">await</span> callback.answer()
+
+<span class="dc">@dp.callback_query</span>(F.data == <span class="st">'cancel'</span>)
+<span class="kw">async def</span> <span class="fn">cancel_cb</span>(callback: CallbackQuery):
+    <span class="kw">await</span> callback.message.answer(<span class="st">'Отменено.'</span>)
+    <span class="kw">await</span> callback.answer(<span class="st">'Действие отменено'</span>, show_alert=<span class="nm">True</span>)</pre>
+      </div>
+      <div class="alert warn">
+        <span class="alert-icon">⚠️</span>
+        <div><strong>callback.answer()</strong> — всегда вызывай в конце! Без него кнопка будет "крутить часики" 30 секунд. Можно передать текст — появится всплывающее уведомление.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BONUS: edit message -->
+  <div class="section">
+    <div class="sec-header green">
+      <div class="sec-num">🎁</div>
+      <div class="sec-title">Бонус: редактируем сообщение по кнопке</div>
+      <span class="sec-emoji">✏️</span>
+    </div>
+    <div class="sec-body">
+      <p class="sec-desc">
+        Вместо отправки нового сообщения можно <strong>изменить текущее</strong> — это выглядит профессиональнее. Используем <span class="ic green">edit_text()</span>:
+      </p>
+      <div class="code-wrap">
+        <div class="code-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-label">bot.py</span>
+          <button class="copy-btn" onclick="cp(this,`@dp.callback_query(F.data == 'cats')\nasync def cats_cb(callback: CallbackQuery):\n    # Редактируем то же сообщение вместо нового\n    await callback.message.edit_text(\n        '🐱 Раздел: Кошки\\n\\nЗдесь будет список кошек...'\n    )\n    await callback.answer()`)">copy</button>
+        </div>
+<pre><span class="dc">@dp.callback_query</span>(F.data == <span class="st">'cats'</span>)
+<span class="kw">async def</span> <span class="fn">cats_cb</span>(callback: CallbackQuery):
+    <span class="cm"># Редактируем то же сообщение вместо нового</span>
+    <span class="kw">await</span> callback.message.edit_text(
+        <span class="st">'🐱 Раздел: Кошки\n\nЗдесь будет список кошек...'</span>
+    )
+    <span class="kw">await</span> callback.answer()</pre>
+      </div>
+      <div class="alert info">
+        <span class="alert-icon">💡</span>
+        <div>Можно и клавиатуру обновить: <span class="ic">edit_reply_markup(reply_markup=new_kb)</span> — это позволяет делать многошаговые меню.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="divider"><span>📌 Итог</span></div>
+
+  <div class="summary section">
+    <h3>Что ты теперь умеешь</h3>
+    <div class="sum-row">
+      <span class="sum-icon">⌨️</span>
+      <div>
+        <div class="sum-title" style="color:var(--blue)">Reply Keyboard</div>
+        <div class="sum-desc">Создать постоянное меню внизу экрана. Кнопки отправляют текст — ловишь через <code style="font-family:'JetBrains Mono',monospace;font-size:11px">F.text == '...'</code></div>
+      </div>
+    </div>
+    <div class="sum-row">
+      <span class="sum-icon">🔲</span>
+      <div>
+        <div class="sum-title" style="color:var(--purple)">Inline Keyboard</div>
+        <div class="sum-desc">Прикрепить кнопки к сообщению. Нажатие — это <code style="font-family:'JetBrains Mono',monospace;font-size:11px">callback_query</code>, ловишь через <code style="font-family:'JetBrains Mono',monospace;font-size:11px">F.data == '...'</code></div>
+      </div>
+    </div>
+    <div class="sum-row">
+      <span class="sum-icon">✏️</span>
+      <div>
+        <div class="sum-title" style="color:var(--green)">edit_text()</div>
+        <div class="sum-desc">Обновить сообщение по кнопке без отправки нового — для красивых многошаговых меню</div>
+      </div>
+    </div>
+    <div class="sum-row">
+      <span class="sum-icon">⚡</span>
+      <div>
+        <div class="sum-title" style="color:var(--amber)">callback.answer()</div>
+        <div class="sum-desc">Всегда вызывай в конце обработчика callback — убирает индикатор загрузки с кнопки</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert success section" style="margin-top:20px">
+    <span class="alert-icon">🚀</span>
+    <div><strong>Следующий урок:</strong> Логика и сценарии — FSM (машина состояний), многошаговые диалоги, if/else в боте.</div>
+  </div>
+
+</div>
+
+<footer>
+  Урок 2 · Кнопки в Telegram боте &nbsp;·&nbsp; <strong>aiogram 3.x</strong>
+</footer>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+    document.getElementById('prog').style.width = (p * 100) + '%';
+  });
+
+  // Scroll reveal
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.section').forEach(el => io.observe(el));
+
+  // Copy
+  function cp(btn, text) {
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'copied ✓';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 2000);
+  }
+</script>
+</body>
+</html>
