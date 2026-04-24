@@ -372,6 +372,49 @@ pre {
 .sum-title { font-weight: 700; margin-bottom: 3px; }
 .sum-desc  { color: var(--muted); line-height: 1.5; font-weight: 400; }
 
+.next-lesson-card {
+  display: block;
+  text-decoration: none;
+  margin-top: 20px;
+}
+
+.next-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #43e97b, #38f9d7);
+  color: #0b3d2e;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.next-content h3 {
+  margin: 5px 0;
+  font-size: 20px;
+}
+
+.next-content p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.next-content strong {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.alert-icon {
+  font-size: 32px;
+}
+
+.next-content:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+}  
+
 footer {
   text-align: center; padding: 40px 0 16px;
   color: var(--dim); font-size: 13px; font-weight: 400;
@@ -798,10 +841,16 @@ inline_kb = InlineKeyboardMarkup(
     </div>
   </div>
 
-  <div class="alert success section" style="margin-top:20px">
-    <span class="alert-icon">🚀</span>
-    <div><strong>Следующий урок:</strong> Логика и сценарии — FSM (машина состояний), многошаговые диалоги, if/else в боте.</div>
-  </div>
+  <a href="telegram_fsm_lesson.html" class="next-lesson-card">
+    <div class="alert success section visible next-content">
+      <span class="alert-icon">🚀</span>
+      <div>
+        <strong>Следующий урок</strong>
+        <h3>Логика и сценарии — FSM</h3>
+        <p>Машина состояний, многошаговые диалоги, if/else в боте</p>
+      </div>
+    </div>
+  </a>
 
 </div>
 
