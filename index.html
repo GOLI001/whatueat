@@ -314,47 +314,30 @@
     box-shadow: 0 0 8px var(--blue);
   }
 
- .btn-link {
+ /* ссылка-обёртка */
+.btn-link {
+  display: block;
   text-decoration: none;
   color: inherit;
-  display: block;
 }
 
+/* делаем кнопку */
 .next-card {
-  cursor: pointer;
-  border: 2px solid #4facfe;
-  border-radius: 14px;
-  padding: 18px;
-  transition: 0.25s;
-  background: #f9fbff;
+  cursor: pointer; /* 🔥 ключевое изменение */
+  transition: border-color .2s, transform .2s, box-shadow .2s;
 }
 
-/* главный эффект кнопки */
+/* усиливаем hover */
 .next-card:hover {
-  background: #eaf4ff;
-  border-color: #007bff;
+  border-color: var(--blue);
   transform: translateY(-3px);
-  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 6px 18px rgba(42,171,238,0.25);
 }
 
-/* эффект при нажатии */
+/* эффект нажатия */
 .next-card:active {
-  transform: scale(0.98);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-}
-
-/* чуть усилим текст */
-.next-card h4 {
-  margin: 8px 0;
-}
-
-.nc-tag {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(0, 123, 255, 0.1);
-  font-size: 12px;
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 
