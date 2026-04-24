@@ -314,6 +314,66 @@
     box-shadow: 0 0 8px var(--blue);
   }
 
+ .lesson-card {
+  display: block;
+  text-decoration: none;
+  margin-top: 20px;
+}
+
+.next-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.nc-icon {
+  font-size: 32px;
+}
+
+.nc-text {
+  flex: 1;
+}
+
+.nc-text h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.nc-text p {
+  margin: 0 0 6px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.nc-tag {
+  font-size: 12px;
+  background: rgba(255,255,255,0.2);
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.arrow {
+  font-size: 22px;
+  opacity: 0.8;
+  transition: transform 0.3s;
+}
+
+.next-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+}
+
+.next-card:hover .arrow {
+  transform: translateX(6px);
+}
+
   /* ── FOOTER ── */
   footer {
     text-align: center; padding: 40px 0 20px;
@@ -484,12 +544,15 @@ dp = Dispatcher()
   <div class="divider"><span>🔥 Что дальше</span></div>
 
   <div class="next-grid">
-    <a href="telegram_buttons_lesson.html" style="text-decoration: none; color: inherit;">
+    <a href="telegram_buttons_lesson.html" class="lesson-card">
       <div class="next-card">
         <span class="nc-icon">💬</span>
-        <h4>Кнопки</h4>
-        <p>Обычные и inline кнопки для удобного взаимодействия с пользователем</p>
-        <span class="nc-tag">ReplyKeyboard · InlineKeyboard</span>
+        <div class="nc-text">
+          <h3>Кнопки</h3>
+          <p>Обычные и inline кнопки для удобного взаимодействия с пользователем</p>
+          <span class="nc-tag">ReplyKeyboard · InlineKeyboard</span>
+        </div>
+        <span class="arrow">→</span>
       </div>
     </a>
     <div class="next-card">
